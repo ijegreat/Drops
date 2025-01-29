@@ -131,3 +131,19 @@
 
 (define-read-only (get-total-tokens)
     (var-get total-tokens))
+
+;; New function: Get complete user status
+(define-read-only (get-user-status (address principal))
+    {
+        allocation: (get-allocation address),
+        is-claimed: (is-claimed address),
+        is-eligible: (check-eligibility address),
+        is-whitelisted: (default-to false (map-get? whitelist address)),
+        has-nft-eligibility: (default-to false (map-get? eligibility-nft address)),
+        can-claim: (and 
+            (var-get is-claim-enabled)
+            (check-eligibility address)
+            (not (is-claimed address))
+            (> (get-allocation address) u0)
+        )
+    })
