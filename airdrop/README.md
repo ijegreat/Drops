@@ -1,169 +1,172 @@
 # Airdrop Smart Contract
 
-A Clarity smart contract for managing token airdrops with features for whitelist management, NFT-based eligibility, and batch distribution capabilities.
+A Clarity smart contract for managing token airdrops with NFT-based eligibility and whitelisting functionality.
 
 ## Features
 
-- Whitelist management for eligible addresses
+- Token allocation management
+- Whitelist functionality
 - NFT-based eligibility verification
-- Individual token allocation management
-- Batch airdrop functionality
-- Claim functionality with various safety checks
-- Toggle mechanism for enabling/disabling claims
-- Comprehensive error handling
+- Batch airdrop capabilities
+- Comprehensive user status checking
+- Claim status toggling
+- Owner-only administrative functions
 
 ## Contract Constants
 
 | Constant | Description | Error Code |
 |----------|-------------|------------|
-| err-owner-only | Only contract owner can perform this action | u100 |
-| err-already-claimed | Address has already claimed tokens | u101 |
-| err-not-eligible | Address is not eligible for claiming | u102 |
-| err-no-allocation | No allocation found for address | u103 |
-| err-claim-disabled | Claiming is currently disabled | u104 |
-| err-invalid-address | Invalid address provided | u105 |
-| err-invalid-amount | Invalid amount specified | u106 |
+| `err-owner-only` | Only contract owner can perform this action | u100 |
+| `err-already-claimed` | User has already claimed their tokens | u101 |
+| `err-not-eligible` | User is not eligible for the airdrop | u102 |
+| `err-no-allocation` | No allocation found for the user | u103 |
+| `err-claim-disabled` | Claiming is currently disabled | u104 |
+| `err-invalid-address` | Invalid address provided | u105 |
+| `err-invalid-amount` | Invalid amount specified | u106 |
+
+## Data Storage
+
+### Variables
+- `total-tokens`: Maximum tokens available for airdrop (uint)
+- `is-claim-enabled`: Global switch for enabling/disabling claims (bool)
+
+### Maps
+- `allocations`: Maps user addresses to their token allocation
+- `claimed`: Tracks whether a user has claimed their tokens
+- `eligibility-nft`: Tracks NFT-based eligibility
+- `whitelist`: Tracks whitelisted addresses
 
 ## Public Functions
 
-### Whitelist Management
+### Administrative Functions (Owner Only)
 
 ```clarity
 (add-to-whitelist (address principal))
 ```
-- Adds an address to the whitelist
-- Only callable by contract owner
-- Returns: (ok true) on success
+Adds an address to the whitelist.
 
 ```clarity
 (remove-from-whitelist (address principal))
 ```
-- Removes an address from the whitelist
-- Only callable by contract owner
-- Returns: (ok true) on success
-
-### NFT Eligibility
+Removes an address from the whitelist.
 
 ```clarity
 (set-nft-eligibility (address principal) (eligible bool))
 ```
-- Sets NFT-based eligibility for an address
-- Only callable by contract owner
-- Returns: (ok true) on success
-
-### Token Allocation
+Sets NFT-based eligibility for an address.
 
 ```clarity
 (set-allocation (address principal) (amount uint))
 ```
-- Sets token allocation for a specific address
-- Only callable by contract owner
-- Amount must be greater than 0 and less than total tokens
-- Returns: (ok true) on success
-
-### Claiming
-
-```clarity
-(claim)
-```
-- Allows eligible addresses to claim their allocated tokens
-- Requires:
-  - Claiming must be enabled
-  - Address must be eligible (whitelisted and NFT eligible)
-  - Address must not have claimed before
-- Returns: (ok allocation) on success
-
-### Batch Operations
+Sets token allocation for an address.
 
 ```clarity
 (batch-airdrop (addresses (list 200 principal)) (amounts (list 200 uint)))
 ```
-- Performs batch airdrop to multiple addresses
-- Only callable by contract owner
-- Maximum 200 addresses per batch
-- All amounts must be greater than 0
-- Returns: (ok true) on success
-
-### Administrative Functions
+Performs batch airdrop to multiple addresses.
 
 ```clarity
 (toggle-claim)
 ```
-- Toggles the claim status (enable/disable)
-- Only callable by contract owner
-- Returns: (ok true) on success
+Toggles global claim status.
 
-## Read-Only Functions
+### User Functions
+
+```clarity
+(claim)
+```
+Allows eligible users to claim their allocated tokens.
+
+### Read-Only Functions
 
 ```clarity
 (get-allocation (address principal))
 ```
-- Returns the allocation amount for an address
-- Returns: uint
+Returns the token allocation for an address.
 
 ```clarity
 (is-claimed (address principal))
 ```
-- Checks if an address has claimed their tokens
-- Returns: bool
+Checks if an address has claimed their tokens.
 
 ```clarity
 (check-eligibility (address principal))
 ```
-- Checks if an address is eligible for claiming
-- Returns: bool
+Checks if an address is eligible for the airdrop.
 
 ```clarity
 (get-claim-status)
 ```
-- Returns the current claim status
-- Returns: bool
+Returns the global claim status.
 
 ```clarity
 (get-total-tokens)
 ```
-- Returns the total token amount configured
-- Returns: uint
+Returns the total tokens available for airdrop.
 
-## Implementation Notes
+```clarity
+(get-user-status (address principal))
+```
+Returns comprehensive status information for a user, including:
+- Token allocation
+- Claim status
+- Eligibility status
+- Whitelist status
+- NFT eligibility status
+- Current ability to claim
 
-1. The contract uses a combination of whitelist and NFT-based eligibility for determining claim eligibility
-2. Token transfer logic needs to be implemented based on the specific token contract being used
-3. Batch operations are limited to 200 addresses per transaction
-4. The contract includes safety checks to prevent:
-   - Double claiming
-   - Unauthorized access
-   - Invalid allocations
-   - Claims when disabled
+## Usage Example
+
+1. Contract deployment:
+   - Deploy the contract
+   - Initial claim status will be disabled
+   - Contract deployer becomes the owner
+
+2. Setup phase:
+   ```clarity
+   ;; Add addresses to whitelist
+   (add-to-whitelist 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7)
+   
+   ;; Set NFT eligibility
+   (set-nft-eligibility 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7 true)
+   
+   ;; Set token allocation
+   (set-allocation 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7 u1000)
+   ```
+
+3. Enable claiming:
+   ```clarity
+   (toggle-claim)
+   ```
+
+4. Users can check their status:
+   ```clarity
+   (get-user-status 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7)
+   ```
+
+5. Eligible users can claim:
+   ```clarity
+   (claim)
+   ```
 
 ## Security Considerations
 
 1. Only the contract owner can:
-   - Manage whitelist
+   - Modify the whitelist
    - Set NFT eligibility
    - Set token allocations
-   - Perform batch airdrops
    - Toggle claim status
+   - Perform batch airdrops
 
-2. Built-in protections:
-   - Prevention of double claims
-   - Validation of addresses and amounts
-   - Eligibility verification
-   - Contract owner cannot be added to whitelist
+2. Users cannot:
+   - Claim more than their allocation
+   - Claim multiple times
+   - Claim if not eligible
+   - Claim when claiming is disabled
 
-## Getting Started
+3. Additional safeguards:
+   - Address validation
+   - Amount validation
+   - Eligibility checks
+   - Claim status verification
 
-1. Deploy the contract
-2. Configure whitelist using `add-to-whitelist`
-3. Set NFT eligibility using `set-nft-eligibility`
-4. Set token allocations using `set-allocation`
-5. Enable claims using `toggle-claim`
-6. Users can claim tokens using `claim`
-
-## Development
-
-To modify this contract:
-1. Ensure you have a Clarity development environment set up
-2. Test thoroughly before deployment
-3. Consider gas costs when performing batch operations
-4. Implement appropriate token transfer logic
